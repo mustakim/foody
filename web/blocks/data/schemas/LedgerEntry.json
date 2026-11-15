@@ -1,0 +1,15 @@
+{
+  "schemaName": "LedgerEntry",
+  "collectionName": "LedgerEntries",
+  "schemaType": 1,
+  "fields": [
+    { "name": "UserId", "type": "String", "isArray": false },
+    { "name": "UserName", "type": "String", "isArray": false },
+    { "name": "EntryType", "type": "String", "isArray": false },
+    { "name": "Amount", "type": "Float", "isArray": false },
+    { "name": "EntryDate", "type": "String", "isArray": false },
+    { "name": "Note", "type": "String", "isArray": false },
+    { "name": "DailyExpenseId", "type": "String", "isArray": false },
+    { "name": "EnteredByName", "type": "String", "isArray": false }
+  ]
+}

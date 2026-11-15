@@ -1,0 +1,15 @@
+{
+  "schemaName": "DailyExpense",
+  "collectionName": "DailyExpenses",
+  "schemaType": 1,
+  "fields": [
+    { "name": "ExpenseDate", "type": "String", "isArray": false },
+    { "name": "TotalAmount", "type": "Float", "isArray": false },
+    { "name": "HeadCount", "type": "Int", "isArray": false },
+    { "name": "PerHeadAmount", "type": "Float", "isArray": false },
+    { "name": "Note", "type": "String", "isArray": false },
+    { "name": "EnteredByName", "type": "String", "isArray": false },
+    { "name": "ReceiptFileIds", "type": "String", "isArray": true },
+    { "name": "ReceiptFileNames", "type": "String", "isArray": true }
+  ]
+}

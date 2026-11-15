@@ -1,0 +1,13 @@
+{
+  "schemaName": "MealEntry",
+  "collectionName": "MealEntries",
+  "schemaType": 1,
+  "fields": [
+    { "name": "UserId", "type": "String", "isArray": false },
+    { "name": "UserName", "type": "String", "isArray": false },
+    { "name": "UserEmail", "type": "String", "isArray": false },
+    { "name": "MealDate", "type": "String", "isArray": false },
+    { "name": "IsCharged", "type": "Boolean", "isArray": false },
+    { "name": "ChargeAmount", "type": "Float", "isArray": false }
+  ]
+}
