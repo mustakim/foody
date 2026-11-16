@@ -5,6 +5,7 @@ import { useT } from "../../lib/i18n/LocalizationProvider";
 import { ActionButton } from "../../shared/ui/ActionButton";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
+import { DateField } from "../../shared/ui/DateField";
 import { FormField } from "../../shared/ui/FormField";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
@@ -50,7 +51,7 @@ export function MealHistoryPage() {
       />
 
       <div className="filter-grid">
-        <FormField label={t("history.month")} type="month" max={todayKey().slice(0, 7)} value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} />
+        <DateField label={t("history.month")} type="month" max={todayKey().slice(0, 7)} value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} />
         <label className="form-field">
           <span>{t("history.person")}</span>
           <div className="search-box"><Search size={16} /><input placeholder={t("balances.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></div>

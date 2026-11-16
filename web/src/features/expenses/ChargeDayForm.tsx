@@ -1,4 +1,4 @@
-import { Receipt, X } from "lucide-react";
+import { Receipt, Search } from "lucide-react";
 import { useState } from "react";
 import { formatMoney, roundMoney, splitEvenly } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
@@ -16,9 +16,9 @@ import { useAttachReceipts, useChargeDay, useExpenseForDate } from "./useExpense
 
 type Person = { userId: string; userName: string; userEmail: string; entry?: MealEntry };
 
-// Admin-only: enter what a day's meal cost, choose who ate (the day's
-// sign-ups are pre-ticked; others can be added from the member list), and
-// split it evenly or with per-person amounts.
+// Admin-only: enter what a day's meal cost, tick who ate from the full
+// member list (that day's sign-ups start ticked), and split it evenly or
+// with per-person amounts. Works for any past date too.
 export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: string; expenseDate: string }) {
   const { t } = useT();
   const [total, setTotal] = useState("");
@@ -30,21 +30,28 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
   const attach = useAttachReceipts();
 
   const members = useMembers();
-  const [extras, setExtras] = useState<Person[]>([]);
-  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  // Ticks the admin changed by hand; anything untouched falls back to
+  // "ticked if they signed up for this day".
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
 
-  // Everyone signed up for the day, plus anyone the admin added by hand.
-  const rows: Person[] = [
-    ...(entries.data ?? []).filter((entry) => entry.UserId).map((entry) => ({
-      entry,
-      userEmail: String(entry.UserEmail ?? ""),
-      userId: String(entry.UserId),
-      userName: String(entry.UserName ?? entry.UserEmail ?? "")
-    })),
-    ...extras
-  ];
-  const includedRows = rows.filter((row) => !excluded.has(row.userId));
+  // Every member, plus any sign-up from someone no longer in the member list.
+  const signups = new Map((entries.data ?? []).filter((entry) => entry.UserId).map((entry) => [String(entry.UserId), entry]));
+  const rows: Person[] = (members.data ?? [])
+    .filter((member) => member.itemId)
+    .map((member) => ({ entry: signups.get(member.itemId!), userEmail: member.email ?? "", userId: member.itemId!, userName: userDisplayName(member) }));
+  for (const [userId, entry] of signups) {
+    if (!rows.some((row) => row.userId === userId)) {
+      rows.push({ entry, userEmail: String(entry.UserEmail ?? ""), userId, userName: String(entry.UserName ?? entry.UserEmail ?? "") });
+    }
+  }
+  rows.sort((a, b) => Number(Boolean(b.entry)) - Number(Boolean(a.entry)) || a.userName.localeCompare(b.userName));
+
+  const isTicked = (row: Person) => ticks[row.userId] ?? Boolean(row.entry);
+  const includedRows = rows.filter(isTicked);
+  const query = search.trim().toLowerCase();
+  const visibleRows = rows.filter((row) => !query || `${row.userName} ${row.userEmail}`.toLowerCase().includes(query));
   const amount = Number(total);
 
   // Typed amounts are kept as entered; whatever is left of the total is
@@ -61,13 +68,8 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
   const amountFor = (userId: string) => shares.get(userId) ?? 0;
   const assignedSum = roundMoney(includedRows.reduce((sum, row) => sum + amountFor(row.userId), 0));
 
-  function toggle(userId: string) {
-    setExcluded((current) => {
-      const next = new Set(current);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
-    });
+  function setTicked(targets: Person[], value: boolean) {
+    setTicks((current) => ({ ...current, ...Object.fromEntries(targets.map((row) => [row.userId, value])) }));
   }
 
   function setCustomAmount(userId: string, value: string) {
@@ -77,17 +79,6 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
       else next[userId] = value;
       return next;
     });
-  }
-
-  function addPerson(userId: string) {
-    const member = members.data?.find((candidate) => candidate.itemId === userId);
-    if (!member?.itemId) return;
-    setExtras((current) => [...current, { userEmail: member.email ?? "", userId: member.itemId!, userName: userDisplayName(member) }]);
-  }
-
-  function removeExtra(userId: string) {
-    setExtras((current) => current.filter((row) => row.userId !== userId));
-    setCustomAmount(userId, "");
   }
 
   if (expense.isLoading || entries.isLoading) return <Skeleton className="skeleton-line" />;
@@ -119,7 +110,6 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
   }
 
   const balanceOff = amount > 0 && includedRows.length > 0 && Math.abs(assignedSum - roundMoney(amount)) > 0.005;
-  const available = (members.data ?? []).filter((member) => member.itemId && !rows.some((row) => row.userId === member.itemId));
 
   return (
     <form
@@ -133,10 +123,10 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
             files,
             note,
             people: includedRows.map((row) => ({ amount: amountFor(row.userId), entry: row.entry, userEmail: row.userEmail, userId: row.userId, userName: row.userName })),
-            removed: rows.filter((row) => row.entry && excluded.has(row.userId)).map((row) => row.entry!),
+            removed: rows.filter((row) => row.entry && !isTicked(row)).map((row) => row.entry!),
             totalAmount: amount
           },
-          { onSuccess: () => { setTotal(""); setNote(""); setFiles([]); setExtras([]); setExcluded(new Set()); setCustom({}); } }
+          { onSuccess: () => { setTotal(""); setNote(""); setFiles([]); setTicks({}); setCustom({}); } }
         );
       }}
     >
@@ -146,19 +136,27 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
       <div className="form-span people-picker">
         <div className="people-picker-header">
           <span className="receipt-label">{t("expenses.whoAte")} ({includedRows.length})</span>
-          {Object.keys(custom).length > 0 ? <button type="button" className="link-button" onClick={() => setCustom({})}>{t("expenses.splitEqually")}</button> : null}
+          <div className="people-picker-actions">
+            <button type="button" className="link-button" onClick={() => setTicked(visibleRows, true)}>{t("expenses.selectAll")}</button>
+            <button type="button" className="link-button" onClick={() => setTicked(visibleRows, false)}>{t("expenses.clearAll")}</button>
+            {Object.keys(custom).length > 0 ? <button type="button" className="link-button" onClick={() => setCustom({})}>{t("expenses.splitEqually")}</button> : null}
+          </div>
         </div>
-        {rows.length === 0 ? <p className="muted">{t("expenses.noSignups")}</p> : (
+        <p className="muted">{t("expenses.whoAteHint")}</p>
+        <label className="search-box"><Search size={16} /><input placeholder={t("members.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+        {members.isLoading ? <Skeleton className="skeleton-line" /> : members.isError ? (
+          <Alert tone="error">{members.error.message}</Alert>
+        ) : visibleRows.length === 0 ? <p className="muted">{t("members.emptyTitle")}</p> : (
           <div className="people-list">
-            {rows.map((row) => {
-              const included = !excluded.has(row.userId);
+            {visibleRows.map((row) => {
+              const included = isTicked(row);
               return (
                 <div key={row.userId} className={`people-row${included ? "" : " people-row-off"}`}>
                   <label className="people-check">
-                    <input type="checkbox" checked={included} onChange={() => toggle(row.userId)} />
+                    <input type="checkbox" checked={included} onChange={() => setTicked([row], !included)} />
                     <span>
                       <strong>{row.userName || row.userEmail}</strong>
-                      <small>{row.entry ? t("expenses.signedUp") : t("expenses.addedByAdmin")}</small>
+                      <small>{row.entry ? t("expenses.signedUp") : row.userEmail}</small>
                     </span>
                   </label>
                   <input
@@ -173,22 +171,12 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
                     value={included ? custom[row.userId] ?? "" : ""}
                     onChange={(event) => setCustomAmount(row.userId, event.target.value)}
                   />
-                  {row.entry ? null : (
-                    <button type="button" className="icon-button" aria-label={`Remove ${row.userName}`} onClick={() => removeExtra(row.userId)}><X size={16} /></button>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
-        <label className="form-field">
-          <span>{t("expenses.addPerson")}</span>
-          <select value="" disabled={members.isLoading} onChange={(event) => addPerson(event.target.value)}>
-            <option value="">{members.isLoading ? t("common.loading") : t("expenses.choosePerson")}</option>
-            {available.map((member) => <option key={member.itemId} value={member.itemId}>{userDisplayName(member)}{member.email ? ` (${member.email})` : ""}</option>)}
-          </select>
-        </label>
-        {excluded.size > 0 && rows.some((row) => row.entry && excluded.has(row.userId)) ? <p className="muted">{t("expenses.untickedNote")}</p> : null}
+        {rows.some((row) => row.entry && !isTicked(row)) ? <p className="muted">{t("expenses.untickedNote")}</p> : null}
       </div>
 
       <div className="form-span"><ReceiptPicker disabled={charge.isPending} files={files} onChange={setFiles} /></div>

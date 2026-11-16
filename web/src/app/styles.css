@@ -31,6 +31,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
@@ -288,3 +289,13 @@ tbody tr:last-child td { border-bottom: 0; }
 .people-amount { background: transparent; border: 1px solid hsl(var(--border)); border-radius: var(--radius); color: hsl(var(--foreground)); font: inherit; height: 36px; padding: 0 10px; text-align: right; width: 120px; }
 .people-amount:focus { border-color: hsl(var(--primary)); outline: none; }
 .form-field select option { background: hsl(var(--card)); }
+.date-field-box { align-items: center; border: 1px solid hsl(var(--border)); border-radius: var(--radius); display: flex; transition: border-color 0.15s ease; }
+.date-field-box:focus-within { border-color: hsl(var(--primary)); }
+.form-field .date-field-box input { border: 0; cursor: pointer; }
+/* Hide the browser's own (low-contrast) icon; our button opens the same picker. */
+.date-field-box input::-webkit-calendar-picker-indicator { display: none; }
+.date-field-button { background: transparent; border: 0; color: hsl(var(--muted-foreground)); display: inline-flex; padding: 0 12px; }
+.date-field-button:hover { color: hsl(var(--primary)); }
+.people-picker-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+.people-picker .search-box { max-width: none; }
+.people-list { max-height: 420px; overflow-y: auto; }

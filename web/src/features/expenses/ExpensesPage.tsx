@@ -6,6 +6,7 @@ import { ActionButton } from "../../shared/ui/ActionButton";
 import { DataTable } from "../../shared/ui/DataTable";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
+import { DateField } from "../../shared/ui/DateField";
 import { FormField } from "../../shared/ui/FormField";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
@@ -36,7 +37,7 @@ export function ExpensesPage() {
       <div className="panel">
         <div className="panel-title"><Receipt size={16} /><span>{t("expenses.enterTitle")}</span></div>
         <div className="form-grid">
-          <FormField label={t("expenses.date")} type="date" max={todayKey()} value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
+          <DateField label={t("expenses.date")} type="date" max={todayKey()} value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
         </div>
         <ChargeDayForm key={date} expenseDate={date} enteredByName={userDisplayName(me.data?.data)} />
       </div>
