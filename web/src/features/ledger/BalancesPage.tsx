@@ -30,6 +30,8 @@ export function BalancesPage() {
   const rows = all.filter((row) => !query || row.userName.toLowerCase().includes(query));
   const totalAdvance = roundMoney(all.reduce((sum, row) => sum + row.credited, 0));
   const totalMeals = roundMoney(all.reduce((sum, row) => sum + row.charged, 0));
+  const remaining = roundMoney(all.reduce((sum, row) => sum + row.balance, 0));
+  const anyAdjusted = all.some((row) => row.adjusted !== 0);
 
   return (
     <section>
@@ -44,7 +46,7 @@ export function BalancesPage() {
         <div className="metric"><span>{t("balances.totalMeals")}</span>{ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totalMeals)}</strong>}</div>
         <div className="metric">
           <span>{t("balances.remaining")}</span>
-          {ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong className={totalAdvance - totalMeals < 0 ? "amount-negative" : ""}>{formatMoney(roundMoney(totalAdvance - totalMeals))}</strong>}
+          {ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong className={remaining < 0 ? "amount-negative" : ""}>{formatMoney(remaining)}</strong>}
           <small>{t("balances.remainingHint")}</small>
         </div>
       </div>
@@ -68,6 +70,7 @@ export function BalancesPage() {
               { header: t("meals.colName"), key: "name", render: (row) => (row.userId === myId ? <strong>{row.userName} ({t("balances.you")})</strong> : row.userName || "—") },
               { header: t("balance.credited"), key: "advance", render: (row) => formatMoney(row.credited) },
               { header: t("balance.charged"), key: "meals", render: (row) => formatMoney(row.charged) },
+              ...(anyAdjusted ? [{ header: t("balance.adjusted"), key: "adjusted", render: (row: UserBalance) => (row.adjusted ? `${row.adjusted > 0 ? "+" : ""}${formatMoney(row.adjusted)}` : "—") }] : []),
               {
                 header: t("members.balance"),
                 key: "balance",

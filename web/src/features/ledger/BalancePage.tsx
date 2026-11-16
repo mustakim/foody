@@ -19,7 +19,7 @@ export function BalancePage() {
   const userId = me.data?.data?.itemId;
   const ledger = useLedger(userId, Boolean(userId));
   const entries = ledger.data ?? [];
-  const totals = (userId && balancesByUser(entries).get(userId)) || { balance: 0, charged: 0, credited: 0 };
+  const totals = (userId && balancesByUser(entries).get(userId)) || { adjusted: 0, balance: 0, charged: 0, credited: 0 };
   const loading = me.isLoading || ledger.isLoading;
 
   return (
@@ -38,6 +38,7 @@ export function BalancePage() {
         </div>
         <div className="metric"><span>{t("balance.credited")}</span>{loading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totals.credited)}</strong>}</div>
         <div className="metric"><span>{t("balance.charged")}</span>{loading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totals.charged)}</strong>}</div>
+        {totals.adjusted ? <div className="metric"><span>{t("balance.adjusted")}</span><strong>{totals.adjusted > 0 ? "+" : ""}{formatMoney(totals.adjusted)}</strong></div> : null}
       </div>
 
       <div className="panel">
@@ -56,7 +57,9 @@ export function BalancePage() {
               {
                 header: t("balance.type"),
                 key: "type",
-                render: (row) => <StatusPill tone={row.EntryType === "charge" ? "warn" : "good"}>{row.EntryType === "charge" ? t("balance.mealCharge") : t("balance.credit")}</StatusPill>
+                render: (row) => <StatusPill tone={row.EntryType === "charge" ? "warn" : row.EntryType === "adjustment" ? "neutral" : "good"}>
+                    {row.EntryType === "charge" ? t("balance.mealCharge") : row.EntryType === "adjustment" ? t("balance.adjustment") : t("balance.credit")}
+                  </StatusPill>
               },
               { header: t("expenses.note"), key: "note", render: (row) => row.Note || "—" },
               {

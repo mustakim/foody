@@ -299,3 +299,12 @@ tbody tr:last-child td { border-bottom: 0; }
 .people-picker-actions { display: flex; flex-wrap: wrap; gap: 14px; }
 .people-picker .search-box { max-width: none; }
 .people-list { max-height: 420px; overflow-y: auto; }
+
+.segmented { background: hsl(var(--secondary)); border-radius: var(--radius); display: grid; gap: 4px; grid-template-columns: repeat(3, 1fr); padding: 4px; }
+.segmented button { background: transparent; border: 0; border-radius: calc(var(--radius) - 2px); color: hsl(var(--muted-foreground)); cursor: pointer; font: inherit; font-weight: 600; padding: 8px 6px; }
+.segmented button.segmented-on { background: hsl(var(--card)); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); color: hsl(var(--foreground)); }
+.money-entries { border: 1px solid hsl(var(--border)); border-radius: var(--radius); display: grid; max-height: 220px; overflow-y: auto; padding-top: 8px; }
+.money-entries .receipt-label { padding: 0 12px 4px; }
+.money-entry-text { display: grid; flex: 1; min-width: 0; }
+.money-entry-text small { color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal { max-height: calc(100vh - 48px); overflow-y: auto; }

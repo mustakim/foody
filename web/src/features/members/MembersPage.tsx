@@ -1,5 +1,5 @@
 import type { BlocksUser } from "@seliseblocks/client";
-import { MailPlus, PlusCircle, RefreshCw, Search, ShieldPlus, Users } from "lucide-react";
+import { MailPlus, RefreshCw, Search, ShieldPlus, Users, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
@@ -83,7 +83,7 @@ export function MembersPage() {
                 key: "actions",
                 render: (row) => (
                   <div className="row-actions">
-                    <ActionButton icon={<PlusCircle size={16} />} onClick={() => setCreditFor(row)}>{t("members.addCredit")}</ActionButton>
+                    <ActionButton icon={<Wallet size={16} />} onClick={() => setCreditFor(row)}>{t("members.adjustMoney")}</ActionButton>
                     {isAdmin(row) ? null : (
                       <ActionButton variant="icon" title={t("members.makeAdmin")} icon={<ShieldPlus size={16} />} disabled={promote.isPending} onClick={() => setPromoteFor(row)}>
                         {t("members.makeAdmin")}
