@@ -16,6 +16,10 @@ import { useLedger } from "./useLedger";
 
 // Everyone's advance, meal cost and balance, built from the shared ledger so
 // regular users can see it without the IAM user-list permission.
+// Admin adjustments (deductions, corrections) are shown as part of the
+// advance, so each row still reads advance - meal cost = balance.
+const netAdvance = (row: UserBalance) => roundMoney(row.credited + row.adjusted);
+
 export function BalancesPage() {
   const { t } = useT();
   const me = useCurrentUser();
@@ -30,16 +34,14 @@ export function BalancesPage() {
   );
   const query = search.trim().toLowerCase();
   const rows = all.filter((row) => !query || row.userName.toLowerCase().includes(query));
-  const totalAdvance = roundMoney(all.reduce((sum, row) => sum + row.credited, 0));
+  const totalAdvance = roundMoney(all.reduce((sum, row) => sum + netAdvance(row), 0));
   // Meal cost comes from the days' expenses themselves, so it matches the
   // Expenses page even if a person's charge is missing from the ledger.
   const totalMeals = roundMoney((expenses.data ?? []).reduce((sum, expense) => sum + Number(expense.TotalAmount ?? 0), 0));
-  const adjustments = roundMoney(all.reduce((sum, row) => sum + row.adjusted, 0));
-  const remaining = roundMoney(totalAdvance + adjustments - totalMeals);
+  const remaining = roundMoney(totalAdvance - totalMeals);
   const toCollect = roundMoney(all.reduce((sum, row) => sum + Math.min(0, row.balance), 0) * -1);
   const owing = all.filter((row) => row.balance < 0).length;
   const loading = ledger.isLoading || expenses.isLoading;
-  const anyAdjusted = all.some((row) => row.adjusted !== 0);
 
   return (
     <section>
@@ -85,9 +87,8 @@ export function BalancesPage() {
             rows={rows}
             columns={[
               { header: t("meals.colName"), key: "name", render: (row) => (row.userId === myId ? <strong>{row.userName} ({t("balances.you")})</strong> : row.userName || "—") },
-              { header: t("balance.credited"), key: "advance", render: (row) => formatMoney(row.credited) },
+              { header: t("balance.credited"), key: "advance", render: (row) => formatMoney(netAdvance(row)) },
               { header: t("balance.charged"), key: "meals", render: (row) => formatMoney(row.charged) },
-              ...(anyAdjusted ? [{ header: t("balance.adjusted"), key: "adjusted", render: (row: UserBalance) => (row.adjusted ? `${row.adjusted > 0 ? "+" : ""}${formatMoney(row.adjusted)}` : "—") }] : []),
               {
                 header: t("members.balance"),
                 key: "balance",
