@@ -1,5 +1,5 @@
 import type { BlocksUser } from "@seliseblocks/client";
-import { PlusCircle, RefreshCw, Search, ShieldPlus, Users } from "lucide-react";
+import { MailPlus, PlusCircle, RefreshCw, Search, ShieldPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
@@ -16,6 +16,7 @@ import { balancesByUser } from "../ledger/ledgerApi";
 import { CreditDialog } from "../ledger/CreditDialog";
 import { useLedger } from "../ledger/useLedger";
 import { isAdmin, useCurrentUser, userDisplayName } from "../profile/useCurrentUser";
+import { InviteDialog } from "./InviteDialog";
 import { useMembers, usePromoteToAdmin } from "./useMembers";
 
 export function MembersPage() {
@@ -27,6 +28,8 @@ export function MembersPage() {
   const [search, setSearch] = useState("");
   const [creditFor, setCreditFor] = useState<BlocksUser | null>(null);
   const [promoteFor, setPromoteFor] = useState<BlocksUser | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [invitedEmail, setInvitedEmail] = useState("");
 
   const balances = useMemo(() => balancesByUser(ledger.data ?? []), [ledger.data]);
   const balanceOf = (member: BlocksUser) => balances.get(member.itemId ?? "")?.balance ?? 0;
@@ -50,7 +53,9 @@ export function MembersPage() {
 
       <div className="toolbar">
         <label className="search-box"><Search size={16} /><input placeholder={t("members.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+        <ActionButton icon={<MailPlus size={18} />} onClick={() => setInviting(true)}>{t("members.invite")}</ActionButton>
       </div>
+      {invitedEmail ? <Alert tone="info">{t("members.invited").replace("{email}", invitedEmail)}</Alert> : null}
       {promote.error ? <Alert tone="error">{promote.error.message}</Alert> : null}
 
       <div className="panel">
@@ -99,6 +104,8 @@ export function MembersPage() {
           onClose={() => setCreditFor(null)}
         />
       ) : null}
+
+      {inviting ? <InviteDialog onClose={() => setInviting(false)} onInvited={setInvitedEmail} /> : null}
 
       {promoteFor ? (
         <Modal title={t("members.makeAdmin")} onClose={() => setPromoteFor(null)}>

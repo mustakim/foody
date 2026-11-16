@@ -13,3 +13,21 @@ export function promoteToAdmin(member: BlocksUser) {
   const roles = Array.from(new Set([...(member.roles ?? []), "user", "admin"]));
   return blocksClient.iam.users.updateAccess({ roles, userId: member.itemId });
 }
+
+// Creates the account with the "user" role; Blocks emails the person an
+// activation link to set their password.
+export async function inviteMember(input: { email: string; firstName: string; lastName: string }) {
+  const email = input.email.trim().toLowerCase();
+  if (!email) throw new Error("Email is required.");
+  const response = await blocksClient.iam.users.create({
+    email,
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    roles: ["user"],
+    userName: email
+  });
+  if (response && response.isSuccess === false) {
+    throw new Error(Object.values(response.errors ?? {}).join(" ") || "Blocks could not create this account.");
+  }
+  return response;
+}
