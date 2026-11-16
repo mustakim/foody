@@ -59,3 +59,20 @@ export async function listMealEntriesForMonth(month: string): Promise<MealEntry[
   const response = await mealEntries.list({ pageNo: 1, pageSize: 5000 });
   return normalizeItems<MealEntry>(response).filter((entry) => String(entry.MealDate ?? "").startsWith(month));
 }
+
+// Admin adds someone who ate without signing up; the entry is charged at once.
+export function addChargedMeal(person: { userId: string; userName: string; userEmail: string }, mealDate: string, amount: number) {
+  return mealEntries.create({
+    ChargeAmount: amount,
+    IsCharged: true,
+    MealDate: mealDate,
+    UserEmail: person.userEmail,
+    UserId: person.userId,
+    UserName: person.userName
+  });
+}
+
+// Admin removes a sign-up for someone who didn't eat after all.
+export function removeMealEntry(entry: MealEntry) {
+  return mealEntries.delete(itemId(entry));
+}

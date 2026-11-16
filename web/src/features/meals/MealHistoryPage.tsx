@@ -80,14 +80,16 @@ export function MealHistoryPage() {
                 </div>
                 <span className="muted">{entries.length} {t("expenses.people").toLowerCase()}</span>
                 {expense ? (
-                  <StatusPill tone="good">{`${formatMoney(Number(expense.TotalAmount ?? 0))} · ${formatMoney(Number(expense.PerHeadAmount ?? 0))} ${t("history.each")}`}</StatusPill>
+                  <StatusPill tone="good">{`${t("expenses.total")} ${formatMoney(Number(expense.TotalAmount ?? 0))}`}</StatusPill>
                 ) : (
                   <StatusPill tone="warn">{t("history.notCharged")}</StatusPill>
                 )}
               </div>
               <div className="chips">
                 {entries.map((entry) => (
-                  <span key={String(entry.ItemId ?? entry.UserId)} className="chip" title={entry.UserEmail}>{entry.UserName || entry.UserEmail}</span>
+                  <span key={String(entry.ItemId ?? entry.UserId)} className="chip" title={entry.UserEmail}>
+                    {entry.UserName || entry.UserEmail}{entry.IsCharged ? ` · ${formatMoney(Number(entry.ChargeAmount ?? 0))}` : ""}
+                  </span>
                 ))}
               </div>
               {expense && receiptsOf(expense).length > 0 ? <ReceiptLinks receipts={receiptsOf(expense)} /> : null}

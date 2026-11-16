@@ -24,3 +24,12 @@ export function roundMoney(value: number): number {
 export function formatMoney(value: number): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 }
+
+// Splits a total into `count` 2-decimal shares that add back up exactly,
+// giving the leftover cents to the first shares.
+export function splitEvenly(total: number, count: number): number[] {
+  if (count <= 0) return [];
+  const cents = Math.round(total * 100);
+  const base = Math.floor(cents / count);
+  return Array.from({ length: count }, (_, index) => (base + (index < cents - base * count ? 1 : 0)) / 100);
+}

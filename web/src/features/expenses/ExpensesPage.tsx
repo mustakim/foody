@@ -61,7 +61,7 @@ export function ExpensesPage() {
               { header: t("expenses.date"), key: "date", render: (row) => <button type="button" className="link-button" onClick={() => setDate(String(row.ExpenseDate ?? todayKey()))}>{row.ExpenseDate ?? ""}</button> },
               { header: t("expenses.total"), key: "total", render: (row) => formatMoney(Number(row.TotalAmount ?? 0)) },
               { header: t("expenses.people"), key: "people", render: (row) => row.HeadCount ?? 0 },
-              { header: t("expenses.perHead"), key: "perHead", render: (row) => formatMoney(Number(row.PerHeadAmount ?? 0)) },
+              { header: t("expenses.average"), key: "perHead", render: (row) => formatMoney(Number(row.PerHeadAmount ?? 0)) },
               { header: t("expenses.note"), key: "note", render: (row) => row.Note || "—" },
               { header: t("receipts.label"), key: "receipts", render: (row) => <ReceiptLinks receipts={receiptsOf(row)} /> },
               { header: t("expenses.enteredBy"), key: "by", render: (row) => row.EnteredByName || "—" }
