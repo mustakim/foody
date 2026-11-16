@@ -1,5 +1,5 @@
 import { blocksClient } from "../../lib/blocks/client";
-import { itemId, normalizeItems, roundMoney } from "../../lib/blocks/items";
+import { itemId, listAllItems, roundMoney } from "../../lib/blocks/items";
 
 export type LedgerEntry = Record<string, unknown> & {
   ItemId?: string;
@@ -20,13 +20,8 @@ const ledger = blocksClient.data.collection<LedgerEntry>("LedgerEntry", {
   fields: ["UserId", "UserName", "EntryType", "Amount", "EntryDate", "Note", "DailyExpenseId", "EnteredByName", "CreatedDate"]
 });
 
-// Small office ledger: one page covers it. Raise this (or page through) if
-// the team grows past a few thousand entries.
-const LEDGER_PAGE_SIZE = 5000;
-
 export async function listLedger(userId?: string): Promise<LedgerEntry[]> {
-  const response = await ledger.list({ filter: userId ? { UserId: userId } : {}, pageNo: 1, pageSize: LEDGER_PAGE_SIZE });
-  const items = normalizeItems<LedgerEntry>(response);
+  const items = await listAllItems<LedgerEntry>(ledger, userId ? { UserId: userId } : {});
   return (userId ? items.filter((entry) => entry.UserId === userId) : items).sort(byNewest);
 }
 

@@ -1,6 +1,6 @@
 import type { BlocksUser } from "@seliseblocks/client";
 import { blocksClient } from "../../lib/blocks/client";
-import { itemId, normalizeItems } from "../../lib/blocks/items";
+import { itemId, listAllItems } from "../../lib/blocks/items";
 import { userDisplayName } from "../profile/useCurrentUser";
 
 export type MealEntry = Record<string, unknown> & {
@@ -26,10 +26,9 @@ export function todayKey(now = new Date()): string {
 }
 
 export async function listMealEntries(mealDate: string): Promise<MealEntry[]> {
-  const response = await mealEntries.list({ filter: { MealDate: mealDate }, pageNo: 1, pageSize: 500 });
   // Filter again locally so a gateway that ignores an unsupported filter
   // can never show another day's sign-ups as today's.
-  return normalizeItems<MealEntry>(response).filter((entry) => entry.MealDate === mealDate);
+  return (await listAllItems<MealEntry>(mealEntries, { MealDate: mealDate })).filter((entry) => entry.MealDate === mealDate);
 }
 
 export function joinMeal(profile: BlocksUser, mealDate: string) {
@@ -56,8 +55,7 @@ export function markMealCharged(entry: MealEntry, amount: number) {
 // All sign-ups whose MealDate starts with the given month (YYYY-MM). The
 // gateway filter is an exact match, so fetch and narrow by month locally.
 export async function listMealEntriesForMonth(month: string): Promise<MealEntry[]> {
-  const response = await mealEntries.list({ pageNo: 1, pageSize: 5000 });
-  return normalizeItems<MealEntry>(response).filter((entry) => String(entry.MealDate ?? "").startsWith(month));
+  return (await listAllItems<MealEntry>(mealEntries)).filter((entry) => String(entry.MealDate ?? "").startsWith(month));
 }
 
 // Admin adds someone who ate without signing up; the entry is charged at once.

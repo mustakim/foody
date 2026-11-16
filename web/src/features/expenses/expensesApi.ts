@@ -1,5 +1,5 @@
 import { blocksClient } from "../../lib/blocks/client";
-import { itemId, normalizeItems, roundMoney } from "../../lib/blocks/items";
+import { itemId, listAllItems, normalizeItems, roundMoney } from "../../lib/blocks/items";
 import { addCharge } from "../ledger/ledgerApi";
 import { addChargedMeal, markMealCharged, removeMealEntry } from "../meals/mealsApi";
 import type { MealEntry } from "../meals/mealsApi";
@@ -23,8 +23,7 @@ const expenses = blocksClient.data.collection<DailyExpense>("DailyExpense", {
 });
 
 export async function listExpenses(): Promise<DailyExpense[]> {
-  const response = await expenses.list({ pageNo: 1, pageSize: 1000 });
-  return normalizeItems<DailyExpense>(response).sort((a, b) => String(b.ExpenseDate ?? "").localeCompare(String(a.ExpenseDate ?? "")));
+  return (await listAllItems<DailyExpense>(expenses)).sort((a, b) => String(b.ExpenseDate ?? "").localeCompare(String(a.ExpenseDate ?? "")));
 }
 
 export async function getExpenseForDate(expenseDate: string): Promise<DailyExpense | null> {

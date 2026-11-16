@@ -8,6 +8,7 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
+import { useExpenses } from "../expenses/useExpenses";
 import { useCurrentUser } from "../profile/useCurrentUser";
 import { balancesByUser } from "./ledgerApi";
 import type { UserBalance } from "./ledgerApi";
@@ -20,6 +21,7 @@ export function BalancesPage() {
   const me = useCurrentUser();
   const myId = me.data?.data?.itemId;
   const ledger = useLedger();
+  const expenses = useExpenses();
   const [search, setSearch] = useState("");
 
   const all = useMemo(
@@ -29,8 +31,14 @@ export function BalancesPage() {
   const query = search.trim().toLowerCase();
   const rows = all.filter((row) => !query || row.userName.toLowerCase().includes(query));
   const totalAdvance = roundMoney(all.reduce((sum, row) => sum + row.credited, 0));
-  const totalMeals = roundMoney(all.reduce((sum, row) => sum + row.charged, 0));
-  const remaining = roundMoney(all.reduce((sum, row) => sum + row.balance, 0));
+  // Meal cost comes from the days' expenses themselves, so it matches the
+  // Expenses page even if a person's charge is missing from the ledger.
+  const totalMeals = roundMoney((expenses.data ?? []).reduce((sum, expense) => sum + Number(expense.TotalAmount ?? 0), 0));
+  const adjustments = roundMoney(all.reduce((sum, row) => sum + row.adjusted, 0));
+  const remaining = roundMoney(totalAdvance + adjustments - totalMeals);
+  const toCollect = roundMoney(all.reduce((sum, row) => sum + Math.min(0, row.balance), 0) * -1);
+  const owing = all.filter((row) => row.balance < 0).length;
+  const loading = ledger.isLoading || expenses.isLoading;
   const anyAdjusted = all.some((row) => row.adjusted !== 0);
 
   return (
@@ -38,16 +46,25 @@ export function BalancesPage() {
       <PageHeader
         title={t("balances.title")}
         subtitle={t("balances.subtitle")}
-        actions={<ActionButton variant="icon" onClick={() => ledger.refetch()} title={t("common.refresh")} icon={<RefreshCw size={18} />} />}
+        actions={<ActionButton variant="icon" onClick={() => { ledger.refetch(); expenses.refetch(); }} title={t("common.refresh")} icon={<RefreshCw size={18} />} />}
       />
 
       <div className="metrics">
-        <div className="metric"><span>{t("balances.totalAdvance")}</span>{ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totalAdvance)}</strong>}</div>
-        <div className="metric"><span>{t("balances.totalMeals")}</span>{ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totalMeals)}</strong>}</div>
+        <div className="metric"><span>{t("balances.totalAdvance")}</span>{loading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totalAdvance)}</strong>}</div>
+        <div className="metric">
+          <span>{t("balances.totalMeals")}</span>
+          {loading ? <Skeleton className="skeleton-line-lg" /> : <strong>{formatMoney(totalMeals)}</strong>}
+          <small>{t("balances.totalMealsHint")}</small>
+        </div>
         <div className="metric">
           <span>{t("balances.remaining")}</span>
-          {ledger.isLoading ? <Skeleton className="skeleton-line-lg" /> : <strong className={remaining < 0 ? "amount-negative" : ""}>{formatMoney(remaining)}</strong>}
+          {loading ? <Skeleton className="skeleton-line-lg" /> : <strong className={remaining < 0 ? "amount-negative" : ""}>{formatMoney(remaining)}</strong>}
           <small>{t("balances.remainingHint")}</small>
+        </div>
+        <div className="metric">
+          <span>{t("balances.toCollect")}</span>
+          {loading ? <Skeleton className="skeleton-line-lg" /> : <strong className={toCollect > 0 ? "amount-negative" : ""}>{formatMoney(toCollect)}</strong>}
+          <small>{t("balances.toCollectHint").replace("{count}", String(owing))}</small>
         </div>
       </div>
 
@@ -74,7 +91,9 @@ export function BalancesPage() {
               {
                 header: t("members.balance"),
                 key: "balance",
-                render: (row) => <span className={row.balance < 0 ? "amount-negative" : "amount-positive"}>{formatMoney(row.balance)}</span>
+                render: (row) => (row.balance < 0
+                  ? <span className="amount-negative">{t("balances.due").replace("{amount}", formatMoney(-row.balance))}</span>
+                  : <span className="amount-positive">{formatMoney(row.balance)}</span>)
               }
             ]}
           />
