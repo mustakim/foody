@@ -9,7 +9,7 @@ import { JsonPanel } from "../../shared/ui/JsonPanel";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
 import { StatusPill } from "../../shared/ui/StatusPill";
-import { useCurrentUser, userDisplayName, userInitials } from "./useCurrentUser";
+import { useCurrentUser, userDisplayName, userInitials, userRoles } from "./useCurrentUser";
 
 export function ProfilePage() {
   const me = useCurrentUser();
@@ -57,7 +57,7 @@ export function ProfilePage() {
 
       <div className="panel">
         <div className="panel-title"><ShieldCheck size={16} /><span>Roles</span></div>
-        {me.isLoading ? <Skeleton className="skeleton-line" /> : <ChipList empty="No roles assigned" items={profile?.roles} />}
+        {me.isLoading ? <Skeleton className="skeleton-line" /> : <ChipList empty="No roles assigned" items={userRoles(profile)} />}
       </div>
 
       <div className="panel">

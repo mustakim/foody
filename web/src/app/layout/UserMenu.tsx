@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 import { useAuth } from "../providers/AuthProvider";
-import { useCurrentUser, userDisplayName, userInitials } from "../../features/profile/useCurrentUser";
+import { useCurrentUser, userDisplayName, userInitials, userRoles } from "../../features/profile/useCurrentUser";
 import { useT } from "../../lib/i18n/LocalizationProvider";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ export function UserMenu({ onNavigate }: { onNavigate: (path: string) => void })
   const me = useCurrentUser();
   const profile = me.data?.data;
   const name = userDisplayName(profile) || (me.isLoading ? "Loading..." : "Guest");
-  const roles = profile?.roles ?? [];
+  const roles = userRoles(profile);
 
   function handleLogout() {
     logout();

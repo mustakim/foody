@@ -21,7 +21,16 @@ export function userDisplayName(profile?: BlocksUser): string {
 // UI gating only -- hiding admin controls is not access control; the Data
 // Gateway's own policies are what actually stop a non-admin write.
 export function isAdmin(profile?: BlocksUser): boolean {
-  return profile?.roles?.includes("admin") ?? false;
+  return userRoles(profile).includes("admin");
+}
+
+// iam.me returns roles as a list, but the IAM user list returns them per
+// organization ({ default: ["admin", "user"] }); accept either shape.
+export function userRoles(profile?: BlocksUser): string[] {
+  const roles: unknown = profile?.roles;
+  if (Array.isArray(roles)) return roles.map(String);
+  if (roles && typeof roles === "object") return Object.values(roles).flatMap((list) => (Array.isArray(list) ? list.map(String) : []));
+  return [];
 }
 
 export function userInitials(profile?: BlocksUser): string {
