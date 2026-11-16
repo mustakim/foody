@@ -73,6 +73,21 @@ export function addCharge(input: { userId: string; userName: string; amount: num
   });
 }
 
+// Used when an admin edits a charged day: change or drop one person's share.
+export function updateChargeAmount(entry: LedgerEntry, amount: number, note: string) {
+  return ledger.update(itemId(entry), { Amount: roundMoney(amount), Note: note });
+}
+
+export function removeCharge(entry: LedgerEntry) {
+  return ledger.delete(itemId(entry));
+}
+
+// A day's meal charges: linked by expense id, plus any for that date whose
+// link was never filled in.
+export function chargesForExpense(entries: LedgerEntry[], expenseId: string, expenseDate: string): LedgerEntry[] {
+  return entries.filter((entry) => entry.EntryType === "charge" && (entry.DailyExpenseId ? entry.DailyExpenseId === expenseId : entry.EntryDate === expenseDate));
+}
+
 // Credits add to the balance, meal charges subtract from it, adjustments
 // carry their own sign.
 export function signedAmount(entry: LedgerEntry): number {

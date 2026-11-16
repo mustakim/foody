@@ -1,6 +1,7 @@
 import { blocksClient } from "../../lib/blocks/client";
 import { itemId, listAllItems, normalizeItems, roundMoney } from "../../lib/blocks/items";
-import { addCharge } from "../ledger/ledgerApi";
+import { addCharge, removeCharge, updateChargeAmount } from "../ledger/ledgerApi";
+import type { LedgerEntry } from "../ledger/ledgerApi";
 import { addChargedMeal, markMealCharged, removeMealEntry } from "../meals/mealsApi";
 import type { MealEntry } from "../meals/mealsApi";
 import { receiptsOf, uploadReceipt } from "./receiptsApi";
@@ -31,6 +32,16 @@ export async function getExpenseForDate(expenseDate: string): Promise<DailyExpen
   return normalizeItems<DailyExpense>(response).find((expense) => expense.ExpenseDate === expenseDate) ?? null;
 }
 
+function validateSplit(totalAmount: number, people: ChargePerson[]) {
+  if (!(totalAmount > 0)) throw new Error("Enter the day's total cost.");
+  if (people.length === 0) throw new Error("Choose at least one person who ate.");
+  const sum = roundMoney(people.reduce((total, person) => total + person.amount, 0));
+  if (Math.abs(sum - roundMoney(totalAmount)) > 0.005) {
+    throw new Error(`The people's amounts add up to ${sum.toFixed(2)}, not the total of ${totalAmount.toFixed(2)}.`);
+  }
+  if (people.some((person) => !(person.amount >= 0))) throw new Error("Amounts can't be negative.");
+}
+
 export type ChargePerson = { userId: string; userName: string; userEmail: string; amount: number; entry?: MealEntry };
 
 // Records a day's expense and charges each chosen person their share:
@@ -45,13 +56,7 @@ export async function chargeDay(input: {
   people: ChargePerson[];
   removed: MealEntry[];
 }) {
-  if (!(input.totalAmount > 0)) throw new Error("Enter the day's total cost.");
-  if (input.people.length === 0) throw new Error("Choose at least one person who ate.");
-  const sum = roundMoney(input.people.reduce((total, person) => total + person.amount, 0));
-  if (Math.abs(sum - roundMoney(input.totalAmount)) > 0.005) {
-    throw new Error(`The people's amounts add up to ${sum.toFixed(2)}, not the total of ${input.totalAmount.toFixed(2)}.`);
-  }
-  if (input.people.some((person) => !(person.amount >= 0))) throw new Error("Amounts can't be negative.");
+  validateSplit(input.totalAmount, input.people);
   if (await getExpenseForDate(input.expenseDate)) throw new Error("This day has already been charged.");
 
   // Upload documents first: if one fails, nobody has been charged yet.
@@ -90,6 +95,53 @@ export async function chargeDay(input: {
   ]);
   const failed = results.filter((result) => result.status === "rejected").length;
   if (failed > 0) throw new Error(`Expense saved, but ${failed} update(s) failed. Check the ledger and meal history before retrying.`);
+  return { headCount: input.people.length };
+}
+
+// Edits a day that was already charged: new total/note, and each person's
+// charge updated, added or removed so the ledger matches the new list.
+export async function updateDay(input: {
+  expense: DailyExpense;
+  totalAmount: number;
+  note: string;
+  enteredByName: string;
+  people: ChargePerson[];
+  charges: LedgerEntry[];
+  removed: MealEntry[];
+}) {
+  validateSplit(input.totalAmount, input.people);
+  const expenseId = itemId(input.expense);
+  const expenseDate = String(input.expense.ExpenseDate ?? "");
+  const note = input.note || `Meal on ${expenseDate}`;
+  await expenses.update(expenseId, {
+    HeadCount: input.people.length,
+    Note: input.note,
+    PerHeadAmount: roundMoney(input.totalAmount / input.people.length),
+    TotalAmount: roundMoney(input.totalAmount)
+  });
+
+  const chargesByUser = new Map<string, LedgerEntry[]>();
+  for (const charge of input.charges) {
+    const userId = String(charge.UserId ?? "");
+    chargesByUser.set(userId, [...(chargesByUser.get(userId) ?? []), charge]);
+  }
+  const kept = new Set(input.people.map((person) => person.userId));
+
+  const results = await Promise.allSettled([
+    ...input.people.map(async (person) => {
+      const amount = roundMoney(person.amount);
+      const [existing, ...duplicates] = chargesByUser.get(person.userId) ?? [];
+      if (existing) await updateChargeAmount(existing, amount, note);
+      else await addCharge({ amount, dailyExpenseId: expenseId, enteredByName: input.enteredByName, entryDate: expenseDate, note, userId: person.userId, userName: person.userName });
+      await Promise.all(duplicates.map(removeCharge));
+      if (person.entry) await markMealCharged(person.entry, amount);
+      else await addChargedMeal(person, expenseDate, amount);
+    }),
+    ...[...chargesByUser].filter(([userId]) => !kept.has(userId)).flatMap(([, charges]) => charges.map(removeCharge)),
+    ...input.removed.map((entry) => removeMealEntry(entry))
+  ]);
+  const failed = results.filter((result) => result.status === "rejected").length;
+  if (failed > 0) throw new Error(`Expense updated, but ${failed} change(s) failed. Check the ledger and meal history, then save again.`);
   return { headCount: input.people.length };
 }
 
