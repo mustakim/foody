@@ -1,4 +1,5 @@
 import { CheckCircle2, Receipt, RefreshCw, UtensilsCrossed, Users, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { formatMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
 import { ActionButton } from "../../shared/ui/ActionButton";
@@ -14,7 +15,7 @@ import { useExpenseForDate } from "../expenses/useExpenses";
 import { balanceOf } from "../ledger/ledgerApi";
 import { useLedger } from "../ledger/useLedger";
 import { isAdmin, useCurrentUser, userDisplayName } from "../profile/useCurrentUser";
-import { todayKey } from "./mealsApi";
+import { CANCEL_CUTOFF_LABEL, canCancel, todayKey } from "./mealRules";
 import type { MealEntry } from "./mealsApi";
 import { useMealEntries, useMealMutations } from "./useMeals";
 
@@ -36,6 +37,13 @@ export function TodayPage() {
   const myBalance = balanceOf(myLedger.data ?? []);
   // Once today's cost has been split, late sign-ups would go uncharged.
   const dayClosed = Boolean(todaysExpense.data);
+  // Re-check the 4 PM cancel cutoff every 30s so an open page locks on time.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const cancelClosed = !canCancel(mealDate, now);
   const dateLabel = new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", weekday: "long" });
 
   return (
@@ -73,13 +81,19 @@ export function TodayPage() {
           <div className="row-actions">
             <ActionButton
               className="primary-button danger"
-              disabled={busy || myEntry.IsCharged === true}
+              disabled={busy || myEntry.IsCharged === true || cancelClosed}
               icon={<XCircle size={18} />}
               onClick={() => leave.mutate(myEntry)}
             >
               {leave.isPending ? t("common.loading") : t("meals.leave")}
             </ActionButton>
-            {myEntry.IsCharged ? <span className="muted">{t("meals.alreadyCharged")}</span> : null}
+            {myEntry.IsCharged ? (
+              <span className="muted">{t("meals.alreadyCharged")}</span>
+            ) : cancelClosed ? (
+              <span className="muted">{t("meals.cancelClosed").replace("{time}", CANCEL_CUTOFF_LABEL)}</span>
+            ) : (
+              <span className="muted">{t("meals.cancelUntil").replace("{time}", CANCEL_CUTOFF_LABEL)}</span>
+            )}
           </div>
         ) : (
           <div className="row-actions">

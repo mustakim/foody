@@ -2,6 +2,7 @@ import type { BlocksUser } from "@seliseblocks/client";
 import { blocksClient } from "../../lib/blocks/client";
 import { itemId, listAllItems } from "../../lib/blocks/items";
 import { userDisplayName } from "../profile/useCurrentUser";
+import { CANCEL_CUTOFF_LABEL, canCancel } from "./mealRules";
 
 export type MealEntry = Record<string, unknown> & {
   ItemId?: string;
@@ -17,13 +18,7 @@ const mealEntries = blocksClient.data.collection<MealEntry>("MealEntry", {
   fields: ["UserId", "UserName", "UserEmail", "MealDate", "IsCharged", "ChargeAmount", "CreatedDate"]
 });
 
-// Meals are counted per calendar day in the viewer's own timezone, stored as
-// YYYY-MM-DD so a day is an exact-match filter rather than a date range.
-export function todayKey(now = new Date()): string {
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
+export { todayKey } from "./mealRules";
 
 export async function listMealEntries(mealDate: string): Promise<MealEntry[]> {
   // Filter again locally so a gateway that ignores an unsupported filter
@@ -44,7 +39,8 @@ export function joinMeal(profile: BlocksUser, mealDate: string) {
 }
 
 export function leaveMeal(entry: MealEntry) {
-  if (entry.IsCharged) throw new Error("This meal has already been charged and can no longer be cancelled.");
+  if (entry.IsCharged) throw new Error("These snacks have already been charged and can no longer be cancelled.");
+  if (!canCancel(String(entry.MealDate ?? ""))) throw new Error(`Sign-ups can't be cancelled after ${CANCEL_CUTOFF_LABEL}.`);
   return mealEntries.delete(itemId(entry));
 }
 

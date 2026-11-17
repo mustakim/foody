@@ -120,7 +120,7 @@ export function reconcile(expenses: ExpenseRecord[], ledger: LedgerEntry[], meal
       current.issues.push(`${current.chargeCount} people were charged, but the expense says ${current.headCount}.`);
     }
     if (differs(current.charged, current.mealCharged) || current.chargeCount !== current.mealCount) {
-      current.issues.push(`Meal history shows ${current.mealCount} charged meals for ${show(current.mealCharged)}; the ledger has ${current.chargeCount} charges for ${show(current.charged)}.`);
+      current.issues.push(`Snacks history shows ${current.mealCount} charged entries for ${show(current.mealCharged)}; the ledger has ${current.chargeCount} charges for ${show(current.charged)}.`);
     }
   }
 
@@ -153,7 +153,7 @@ export function reconcile(expenses: ExpenseRecord[], ledger: LedgerEntry[], meal
   for (const current of people.values()) {
     current.balance = roundMoney(current.credited + current.adjusted - current.charged);
     if (differs(current.charged, current.mealCost)) {
-      current.issues.push(`Ledger meal cost ${show(current.charged)} vs meal history ${show(current.mealCost)}.`);
+      current.issues.push(`Ledger snacks cost ${show(current.charged)} vs snacks history ${show(current.mealCost)}.`);
     }
   }
 

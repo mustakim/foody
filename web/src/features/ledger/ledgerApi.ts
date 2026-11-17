@@ -16,7 +16,7 @@ export async function listLedger(userId?: string): Promise<LedgerEntry[]> {
 }
 
 export function addCredit(input: { userId: string; userName: string; amount: number; note: string; entryDate: string; enteredByName: string }) {
-  if (!(input.amount > 0)) throw new Error("Credit amount must be more than zero.");
+  if (!(input.amount > 0)) throw new Error("The balance to add must be more than zero.");
   return ledger.create({
     Amount: roundMoney(input.amount),
     EnteredByName: input.enteredByName,
@@ -46,7 +46,7 @@ export function addAdjustment(input: { userId: string; userName: string; amount:
 // For undoing a mistaken advance or adjustment. Meal charges belong to a
 // day's expense, so they aren't removed one by one.
 export function deleteLedgerEntry(entry: LedgerEntry) {
-  if (entry.EntryType === "charge") throw new Error("Meal charges can't be deleted here.");
+  if (entry.EntryType === "charge") throw new Error("Snacks charges can't be deleted here.");
   return ledger.delete(itemId(entry));
 }
 

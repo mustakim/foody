@@ -40,7 +40,7 @@ describe("reconcile", () => {
 
   it("flags a person whose ledger and meal history disagree", () => {
     const result = reconcile(expenses.slice(0, 1), ledger, meals.slice(0, 1));
-    expect(result.people.find((row) => row.userId === "u2")?.issues[0]).toMatch(/meal history 0.00/);
+    expect(result.people.find((row) => row.userId === "u2")?.issues[0]).toMatch(/snacks history 0.00/);
   });
 
   it("ignores uncharged sign-ups", () => {

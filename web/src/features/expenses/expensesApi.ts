@@ -34,7 +34,7 @@ export async function getExpenseForDate(expenseDate: string): Promise<DailyExpen
 
 function validateSplit(totalAmount: number, people: ChargePerson[]) {
   if (!(totalAmount > 0)) throw new Error("Enter the day's total cost.");
-  if (people.length === 0) throw new Error("Choose at least one person who ate.");
+  if (people.length === 0) throw new Error("Choose at least one person who had snacks.");
   const sum = roundMoney(people.reduce((total, person) => total + person.amount, 0));
   if (Math.abs(sum - roundMoney(totalAmount)) > 0.005) {
     throw new Error(`The people's amounts add up to ${sum.toFixed(2)}, not the total of ${totalAmount.toFixed(2)}.`);
@@ -84,7 +84,7 @@ export async function chargeDay(input: {
         dailyExpenseId: expenseId,
         enteredByName: input.enteredByName,
         entryDate: input.expenseDate,
-        note: input.note || `Meal on ${input.expenseDate}`,
+        note: input.note || `Snacks on ${input.expenseDate}`,
         userId: person.userId,
         userName: person.userName
       });
@@ -94,7 +94,7 @@ export async function chargeDay(input: {
     ...input.removed.map((entry) => removeMealEntry(entry))
   ]);
   const failed = results.filter((result) => result.status === "rejected").length;
-  if (failed > 0) throw new Error(`Expense saved, but ${failed} update(s) failed. Check the ledger and meal history before retrying.`);
+  if (failed > 0) throw new Error(`Expense saved, but ${failed} update(s) failed. Check balances and snacks history before retrying.`);
   return { headCount: input.people.length };
 }
 
@@ -112,7 +112,7 @@ export async function updateDay(input: {
   validateSplit(input.totalAmount, input.people);
   const expenseId = itemId(input.expense);
   const expenseDate = String(input.expense.ExpenseDate ?? "");
-  const note = input.note || `Meal on ${expenseDate}`;
+  const note = input.note || `Snacks on ${expenseDate}`;
   await expenses.update(expenseId, {
     HeadCount: input.people.length,
     Note: input.note,
@@ -141,7 +141,7 @@ export async function updateDay(input: {
     ...input.removed.map((entry) => removeMealEntry(entry))
   ]);
   const failed = results.filter((result) => result.status === "rejected").length;
-  if (failed > 0) throw new Error(`Expense updated, but ${failed} change(s) failed. Check the ledger and meal history, then save again.`);
+  if (failed > 0) throw new Error(`Expense updated, but ${failed} change(s) failed. Check balances and snacks history, then save again.`);
   return { headCount: input.people.length };
 }
 
