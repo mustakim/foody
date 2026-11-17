@@ -12,6 +12,8 @@ export const defaultDictionary = {
   "auth.welcome": "Welcome back",
   "auth.subtitle": "Sign in with your Blocks account to continue.",
   "auth.continue": "Continue with Blocks",
+  "auth.tagline": "Sign up for today's snacks and keep track of your balance.",
+  "auth.imageAlt": "Bowls of chips, popcorn, cookies and sweets",
   "auth.redirecting": "Redirecting...",
   "auth.notConfigured": "Login is not configured yet. Register a public OIDC client and set VITE_BLOCKS_OIDC_CLIENT_ID in .env.",
   "auth.failed": "Sign-in failed",

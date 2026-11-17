@@ -1,4 +1,5 @@
-import { Activity, PanelLeft } from "lucide-react";
+import { PanelLeft } from "lucide-react";
+import { FoodyLogo } from "../../shared/ui/FoodyLogo";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -47,7 +48,7 @@ export function AppShell({ activePath, children, onNavigate }: { activePath: str
         <div className="sidebar-header">
           {collapsed ? null : (
             <a className="brand" href="/" onClick={(event) => { event.preventDefault(); onNavigate("/"); }}>
-              <span className="brand-mark"><Activity size={16} /></span>
+              <FoodyLogo size={28} />
               <span>Foody</span>
             </a>
           )}
