@@ -46,10 +46,29 @@ export function isPendingActivation(member: BlocksUser): boolean {
 export async function resendInvitation(member: BlocksUser) {
   if (!member.itemId || !member.email) throw new Error("This member has no id or email.");
   if (!isPendingActivation(member)) throw new Error("This member has already activated their account.");
-  const response = await blocksClient.auth.resendActivation({ email: member.email, userId: member.itemId });
-  if (response && response.isSuccess === false) {
-    const errors = response.errors && typeof response.errors === "object" ? Object.values(response.errors).join(" ") : "";
-    throw new Error(errors || String(response.message ?? "") || "Blocks could not resend the invitation.");
+  const response: unknown = await blocksClient.auth.resendActivation({ email: member.email, userId: member.itemId });
+  // The SDK's auth calls return the body even for HTTP errors, so only an
+  // explicit isSuccess: true counts as sent; anything else is IAM's refusal.
+  if ((response as { isSuccess?: unknown } | null)?.isSuccess !== true) {
+    throw new Error(iamErrorText(response) || "Blocks did not confirm the invitation was sent.");
   }
   return response;
+}
+
+// Flattens IAM's error shapes ({errors: {Field: [..]}}, {title}, {message},
+// or plain text) into one readable line.
+export function iamErrorText(response: unknown): string {
+  if (!response) return "";
+  if (typeof response === "string") return response.slice(0, 300);
+  const body = response as { errors?: unknown; message?: unknown; title?: unknown; detail?: unknown };
+  const parts: string[] = [];
+  const collect = (value: unknown, field?: string) => {
+    if (value == null || value === "") return;
+    if (Array.isArray(value)) value.forEach((item) => collect(item, field));
+    else if (typeof value === "object") Object.entries(value as Record<string, unknown>).forEach(([key, item]) => collect(item, key));
+    else parts.push(field && !/^\d+$/.test(field) ? `${field}: ${String(value)}` : String(value));
+  };
+  collect(body.errors);
+  for (const value of [body.title, body.detail, body.message]) if (typeof value === "string" && value) parts.push(value);
+  return parts.length ? Array.from(new Set(parts)).join(" · ") : JSON.stringify(response).slice(0, 300);
 }
