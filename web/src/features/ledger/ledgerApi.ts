@@ -1,20 +1,10 @@
 import { blocksClient } from "../../lib/blocks/client";
 import { itemId, listAllItems, roundMoney } from "../../lib/blocks/items";
 
-export type LedgerEntry = Record<string, unknown> & {
-  ItemId?: string;
-  UserId?: string;
-  UserName?: string;
-  // credit = advance paid, charge = meal cost, adjustment = admin correction
-  // (Amount is signed: positive adds to the balance, negative deducts).
-  EntryType?: "credit" | "charge" | "adjustment";
-  Amount?: number;
-  EntryDate?: string;
-  Note?: string;
-  DailyExpenseId?: string;
-  EnteredByName?: string;
-  CreatedDate?: string;
-};
+import type { LedgerEntry } from "./ledgerMath";
+
+export type { LedgerEntry, UserBalance } from "./ledgerMath";
+export { balanceOf, balancesByUser, chargesForExpense, signedAmount } from "./ledgerMath";
 
 const ledger = blocksClient.data.collection<LedgerEntry>("LedgerEntry", {
   fields: ["UserId", "UserName", "EntryType", "Amount", "EntryDate", "Note", "DailyExpenseId", "EnteredByName", "CreatedDate"]
@@ -80,40 +70,6 @@ export function updateChargeAmount(entry: LedgerEntry, amount: number, note: str
 
 export function removeCharge(entry: LedgerEntry) {
   return ledger.delete(itemId(entry));
-}
-
-// A day's meal charges: linked by expense id, plus any for that date whose
-// link was never filled in.
-export function chargesForExpense(entries: LedgerEntry[], expenseId: string, expenseDate: string): LedgerEntry[] {
-  return entries.filter((entry) => entry.EntryType === "charge" && (entry.DailyExpenseId ? entry.DailyExpenseId === expenseId : entry.EntryDate === expenseDate));
-}
-
-// Credits add to the balance, meal charges subtract from it, adjustments
-// carry their own sign.
-export function signedAmount(entry: LedgerEntry): number {
-  const amount = Number(entry.Amount ?? 0);
-  return entry.EntryType === "charge" ? -amount : amount;
-}
-
-export function balanceOf(entries: LedgerEntry[]): number {
-  return roundMoney(entries.reduce((sum, entry) => sum + signedAmount(entry), 0));
-}
-
-export type UserBalance = { userId: string; userName: string; credited: number; charged: number; adjusted: number; balance: number };
-
-export function balancesByUser(entries: LedgerEntry[]): Map<string, UserBalance> {
-  const balances = new Map<string, UserBalance>();
-  for (const entry of entries) {
-    if (!entry.UserId) continue;
-    const current = balances.get(entry.UserId) ?? { adjusted: 0, balance: 0, charged: 0, credited: 0, userId: entry.UserId, userName: entry.UserName ?? "" };
-    const amount = Number(entry.Amount ?? 0);
-    if (entry.EntryType === "charge") current.charged = roundMoney(current.charged + amount);
-    else if (entry.EntryType === "adjustment") current.adjusted = roundMoney(current.adjusted + amount);
-    else current.credited = roundMoney(current.credited + amount);
-    current.balance = roundMoney(current.credited - current.charged + current.adjusted);
-    balances.set(entry.UserId, current);
-  }
-  return balances;
 }
 
 function byNewest(a: LedgerEntry, b: LedgerEntry): number {

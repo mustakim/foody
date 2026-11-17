@@ -11,22 +11,41 @@ export function normalizeItems<T>(response: unknown): T[] {
   return [];
 }
 
-// The gateway caps a page (100 items) whatever pageSize is asked for, so
-// reading "everything" means walking pages until a short one comes back.
+// The gateway caps how many items one page returns, whatever pageSize is
+// asked for, so reading "everything" walks pages until the server's own
+// totalCount is reached. Pages are sorted by ItemId so records can't shift
+// between pages, and duplicates are dropped by id.
 const PAGE_SIZE = 100;
 const MAX_PAGES = 500;
 
-export async function listAllItems<T>(
-  collection: { list: (options: { filter?: Record<string, unknown>; pageNo: number; pageSize: number }) => Promise<unknown> },
-  filter: Record<string, unknown> = {}
-): Promise<T[]> {
-  const all: T[] = [];
-  for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-    const page = normalizeItems<T>(await collection.list({ filter, pageNo, pageSize: PAGE_SIZE }));
-    all.push(...page);
-    if (page.length < PAGE_SIZE) break;
+type ListFn = (options: { filter?: Record<string, unknown>; pageNo: number; pageSize: number; sort?: Record<string, number> }) => Promise<unknown>;
+
+export function pageTotalCount(response: unknown): number | undefined {
+  const data = (response as { data?: Record<string, unknown> }).data ?? {};
+  for (const value of [response, data, ...Object.values(data)]) {
+    const count = (value as { totalCount?: unknown } | null)?.totalCount;
+    if (typeof count === "number") return count;
   }
-  return all;
+  return undefined;
+}
+
+export async function listAllItems<T extends Record<string, unknown>>(collection: { list: ListFn }, filter: Record<string, unknown> = {}): Promise<T[]> {
+  const byId = new Map<string, T>();
+  let unkeyed: T[] = [];
+  let expected: number | undefined;
+  for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+    const response = await collection.list({ filter, pageNo, pageSize: PAGE_SIZE, sort: { ItemId: 1 } });
+    const page = normalizeItems<T>(response);
+    expected ??= pageTotalCount(response);
+    for (const item of page) {
+      const id = item.ItemId ?? item.itemId ?? item.id;
+      if (id) byId.set(String(id), item);
+      else unkeyed = [...unkeyed, item];
+    }
+    const read = byId.size + unkeyed.length;
+    if (page.length === 0 || (expected !== undefined ? read >= expected : page.length < PAGE_SIZE)) break;
+  }
+  return [...byId.values(), ...unkeyed];
 }
 
 export function itemId(item: Record<string, unknown>): string {

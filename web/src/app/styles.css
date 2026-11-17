@@ -309,3 +309,6 @@ tbody tr:last-child td { border-bottom: 0; }
 .money-entry-text small { color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .modal { max-height: calc(100vh - 48px); overflow-y: auto; }
 .form-actions-start { justify-content: flex-start; }
+.audit-ok { align-items: center; color: hsl(var(--success-fg)); display: inline-flex; gap: 4px; }
+.audit-issues { display: grid; gap: 4px; justify-items: start; }
+.audit-issues small { color: hsl(var(--muted-foreground)); }

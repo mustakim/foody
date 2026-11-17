@@ -1,4 +1,4 @@
-import { History, Receipt, Scale, UserRound, Users, UtensilsCrossed, Wallet } from "lucide-react";
+import { History, Receipt, Scale, ShieldCheck, UserRound, Users, UtensilsCrossed, Wallet } from "lucide-react";
 
 // adminOnly hides the link for regular users; the page itself also checks
 // the role, and the Data Gateway policies are what actually enforce it.
@@ -9,5 +9,6 @@ export const navItems = [
   { href: "/expenses", labelKey: "nav.expenses", icon: Receipt, adminOnly: true },
   { href: "/history", labelKey: "nav.history", icon: History, adminOnly: true },
   { href: "/members", labelKey: "nav.members", icon: Users, adminOnly: true },
+  { href: "/check", labelKey: "nav.check", icon: ShieldCheck, adminOnly: true },
   { href: "/profile", labelKey: "nav.profile", icon: UserRound, adminOnly: false }
 ] as const;

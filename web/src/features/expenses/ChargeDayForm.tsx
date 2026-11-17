@@ -41,6 +41,7 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
         <div><span>{t("expenses.total")}</span><strong>{formatMoney(Number(expense.data.TotalAmount ?? 0))}</strong></div>
         <div><span>{t("expenses.people")}</span><strong>{expense.data.HeadCount ?? 0}</strong></div>
         <div><span>{t("expenses.average")}</span><strong>{formatMoney(Number(expense.data.PerHeadAmount ?? 0))}</strong></div>
+        {partlyCharged(expense.data, ledger.data, expenseDate, t)}
         <p className="muted">{t("expenses.alreadyCharged")}{expense.data.EnteredByName ? ` (${expense.data.EnteredByName})` : ""}</p>
         <div className="charge-summary-wide form-actions form-actions-start">
           <ActionButton icon={<Pencil size={16} />} onClick={() => setEditing(true)}>{t("expenses.edit")}</ActionButton>
@@ -82,6 +83,23 @@ export function ChargeDayForm({ enteredByName, expenseDate }: { enteredByName: s
   }
 
   return <DayForm charges={[]} enteredByName={enteredByName} entries={entries.data ?? []} expenseDate={expenseDate} />;
+}
+
+// After a partial failure the expense exists but some charges don't; say so
+// instead of showing the day as done.
+function partlyCharged(expense: DailyExpense, ledger: LedgerEntry[] | undefined, expenseDate: string, t: ReturnType<typeof useT>["t"]) {
+  if (!ledger) return null;
+  const charges = chargesForExpense(ledger, itemId(expense), expenseDate);
+  const charged = roundMoney(charges.reduce((sum, entry) => sum + Number(entry.Amount ?? 0), 0));
+  const total = Number(expense.TotalAmount ?? 0);
+  if (Math.abs(charged - total) <= 0.005) return null;
+  return (
+    <div className="charge-summary-wide">
+      <Alert tone="warn">
+        {t("expenses.partlyCharged").replace("{charged}", formatMoney(charged)).replace("{total}", formatMoney(total)).replace("{count}", String(charges.length))}
+      </Alert>
+    </div>
+  );
 }
 
 function DayForm({ charges, enteredByName, entries, expense, expenseDate, onDone }: {

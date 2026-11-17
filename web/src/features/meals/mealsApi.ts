@@ -52,10 +52,14 @@ export function markMealCharged(entry: MealEntry, amount: number) {
   return mealEntries.update(itemId(entry), { ChargeAmount: amount, IsCharged: true });
 }
 
+export function listAllMealEntries(): Promise<MealEntry[]> {
+  return listAllItems<MealEntry>(mealEntries);
+}
+
 // All sign-ups whose MealDate starts with the given month (YYYY-MM). The
 // gateway filter is an exact match, so fetch and narrow by month locally.
 export async function listMealEntriesForMonth(month: string): Promise<MealEntry[]> {
-  return (await listAllItems<MealEntry>(mealEntries)).filter((entry) => String(entry.MealDate ?? "").startsWith(month));
+  return (await listAllMealEntries()).filter((entry) => String(entry.MealDate ?? "").startsWith(month));
 }
 
 // Admin adds someone who ate without signing up; the entry is charged at once.

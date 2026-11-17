@@ -3,13 +3,14 @@ import { useMemo, useState } from "react";
 import { formatMoney, roundMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
 import { ActionButton } from "../../shared/ui/ActionButton";
+import { Alert } from "../../shared/ui/Alert";
 import { DataTable } from "../../shared/ui/DataTable";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { Skeleton } from "../../shared/ui/Skeleton";
 import { useExpenses } from "../expenses/useExpenses";
-import { useCurrentUser } from "../profile/useCurrentUser";
+import { isAdmin, useCurrentUser } from "../profile/useCurrentUser";
 import { balancesByUser } from "./ledgerApi";
 import type { UserBalance } from "./ledgerApi";
 import { useLedger } from "./useLedger";
@@ -39,6 +40,10 @@ export function BalancesPage() {
   // Expenses page even if a person's charge is missing from the ledger.
   const totalMeals = roundMoney((expenses.data ?? []).reduce((sum, expense) => sum + Number(expense.TotalAmount ?? 0), 0));
   const remaining = roundMoney(totalAdvance - totalMeals);
+  // Expenses not yet shared out to anyone: they lower the cash remaining but
+  // nobody's balance, so the two only agree once this is zero.
+  const totalCharged = roundMoney(all.reduce((sum, row) => sum + row.charged, 0));
+  const unallocated = roundMoney(totalMeals - totalCharged);
   const toCollect = roundMoney(all.reduce((sum, row) => sum + Math.min(0, row.balance), 0) * -1);
   const owing = all.filter((row) => row.balance < 0).length;
   const loading = ledger.isLoading || expenses.isLoading;
@@ -69,6 +74,12 @@ export function BalancesPage() {
           <small>{t("balances.toCollectHint").replace("{count}", String(owing))}</small>
         </div>
       </div>
+
+      {!loading && Math.abs(unallocated) > 0.005 ? (
+        <Alert tone="warn">
+          {t(isAdmin(me.data?.data) ? "balances.unallocatedAdmin" : "balances.unallocated").replace("{amount}", formatMoney(unallocated))}
+        </Alert>
+      ) : null}
 
       <div className="toolbar">
         <label className="search-box"><Search size={16} /><input placeholder={t("balances.search")} value={search} onChange={(event) => setSearch(event.target.value)} /></label>

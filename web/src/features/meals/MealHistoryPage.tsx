@@ -1,6 +1,6 @@
 import { CalendarDays, History, RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { formatMoney } from "../../lib/blocks/items";
+import { formatMoney, roundMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
 import { ActionButton } from "../../shared/ui/ActionButton";
 import { EmptyState } from "../../shared/ui/EmptyState";
@@ -35,12 +35,23 @@ export function MealHistoryPage() {
       const date = String(entry.MealDate ?? "");
       byDate.set(date, [...(byDate.get(date) ?? []), entry]);
     }
+    // A day with an expense but no meal records must still show up, or its
+    // cost silently drops out of the month.
+    if (!query) {
+      for (const expense of expenses.data ?? []) {
+        const date = String(expense.ExpenseDate ?? "");
+        if (date.startsWith(month) && !byDate.has(date)) byDate.set(date, []);
+      }
+    }
     return Array.from(byDate.entries())
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, entries]) => ({ date, entries: entries.sort((a, b) => String(a.UserName ?? "").localeCompare(String(b.UserName ?? ""))) }));
-  }, [history.data, query]);
+  }, [expenses.data, history.data, month, query]);
   const expenseByDate = new Map((expenses.data ?? []).map((expense) => [expense.ExpenseDate, expense]));
   const totalMeals = days.reduce((sum, day) => sum + day.entries.length, 0);
+  const chargedOf = (entries: MealEntry[]) => roundMoney(entries.reduce((sum, entry) => sum + (entry.IsCharged ? Number(entry.ChargeAmount ?? 0) : 0), 0));
+  const monthCharged = roundMoney(days.reduce((sum, day) => sum + chargedOf(day.entries), 0));
+  const monthExpenses = roundMoney(days.reduce((sum, day) => sum + Number(expenseByDate.get(day.date)?.TotalAmount ?? 0), 0));
 
   return (
     <section>
@@ -61,6 +72,14 @@ export function MealHistoryPage() {
       <div className="metrics">
         <div className="metric"><span>{t("history.days")}</span><strong>{days.length}</strong></div>
         <div className="metric"><span>{t("history.meals")}</span><strong>{totalMeals}</strong><small>{t("history.mealsHint")}</small></div>
+        <div className="metric"><span>{query ? t("history.personCost") : t("history.monthCharged")}</span><strong>{formatMoney(monthCharged)}</strong><small>{t("history.monthChargedHint")}</small></div>
+        {query ? null : (
+          <div className="metric">
+            <span>{t("history.monthExpenses")}</span>
+            <strong className={Math.abs(monthExpenses - monthCharged) > 0.005 ? "amount-negative" : ""}>{formatMoney(monthExpenses)}</strong>
+            <small>{Math.abs(monthExpenses - monthCharged) > 0.005 ? t("history.monthMismatch").replace("{amount}", formatMoney(roundMoney(monthExpenses - monthCharged))) : t("history.monthExpensesHint")}</small>
+          </div>
+        )}
       </div>
 
       {history.isError ? (
@@ -80,7 +99,9 @@ export function MealHistoryPage() {
                   <span>{new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", weekday: "long", year: "numeric" })}</span>
                 </div>
                 <span className="muted">{entries.length} {t("expenses.people").toLowerCase()}</span>
-                {expense ? (
+                {expense && !query && Math.abs(chargedOf(entries) - Number(expense.TotalAmount ?? 0)) > 0.005 ? (
+                  <StatusPill tone="warn">{t("history.partlyCharged").replace("{charged}", formatMoney(chargedOf(entries))).replace("{total}", formatMoney(Number(expense.TotalAmount ?? 0)))}</StatusPill>
+                ) : expense ? (
                   <StatusPill tone="good">{`${t("expenses.total")} ${formatMoney(Number(expense.TotalAmount ?? 0))}`}</StatusPill>
                 ) : (
                   <StatusPill tone="warn">{t("history.notCharged")}</StatusPill>

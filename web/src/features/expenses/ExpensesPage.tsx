@@ -20,7 +20,8 @@ import { useExpenses } from "./useExpenses";
 
 export function ExpensesPage() {
   const { t } = useT();
-  const [date, setDate] = useState(todayKey());
+  // ?date=YYYY-MM-DD opens a specific day, e.g. from the Data check page.
+  const [date, setDate] = useState(() => new URLSearchParams(window.location.search).get("date")?.match(/^\d{4}-\d{2}-\d{2}$/)?.[0] ?? todayKey());
   const me = useCurrentUser();
   const expenses = useExpenses();
   const list = expenses.data ?? [];

@@ -5,6 +5,7 @@ import { CallbackPage } from "../../features/auth/CallbackPage";
 import { ErrorPage } from "../../features/auth/ErrorPage";
 import { LoginPage } from "../../features/auth/LoginPage";
 import { NotFoundPage } from "../../features/auth/NotFoundPage";
+import { DataCheckPage } from "../../features/audit/DataCheckPage";
 import { ExpensesPage } from "../../features/expenses/ExpensesPage";
 import { BalancePage } from "../../features/ledger/BalancePage";
 import { BalancesPage } from "../../features/ledger/BalancesPage";
@@ -21,11 +22,12 @@ const protectedRoutes = {
   "/expenses": ExpensesPage,
   "/history": MealHistoryPage,
   "/members": MembersPage,
+  "/check": DataCheckPage,
   "/profile": ProfilePage,
   "/error": ErrorPage
 };
 
-const adminRoutes = new Set(["/expenses", "/history", "/members"]);
+const adminRoutes = new Set(["/expenses", "/history", "/members", "/check"]);
 
 export function AppRouter() {
   const [path, setPath] = useState(() => window.location.pathname);
