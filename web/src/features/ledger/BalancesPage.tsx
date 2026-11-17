@@ -13,6 +13,7 @@ import { useExpenses } from "../expenses/useExpenses";
 import { isAdmin, useCurrentUser } from "../profile/useCurrentUser";
 import { balancesByUser } from "./ledgerApi";
 import type { UserBalance } from "./ledgerApi";
+import { PersonBreakdown } from "./PersonBreakdown";
 import { useLedger } from "./useLedger";
 
 // Everyone's advance, meal cost and balance, built from the shared ledger so
@@ -28,6 +29,7 @@ export function BalancesPage() {
   const ledger = useLedger();
   const expenses = useExpenses();
   const [search, setSearch] = useState("");
+  const [openPerson, setOpenPerson] = useState<UserBalance | null>(null);
 
   const all = useMemo(
     () => Array.from(balancesByUser(ledger.data ?? []).values()).sort((a, b) => a.userName.localeCompare(b.userName)),
@@ -52,7 +54,7 @@ export function BalancesPage() {
     <section>
       <PageHeader
         title={t("balances.title")}
-        subtitle={t("balances.subtitle")}
+        subtitle={`${t("balances.subtitle")} ${t("balances.allTime")}`}
         actions={<ActionButton variant="icon" onClick={() => { ledger.refetch(); expenses.refetch(); }} title={t("common.refresh")} icon={<RefreshCw size={18} />} />}
       />
 
@@ -99,7 +101,11 @@ export function BalancesPage() {
             columns={[
               { header: t("meals.colName"), key: "name", render: (row) => (row.userId === myId ? <strong>{row.userName} ({t("balances.you")})</strong> : row.userName || "—") },
               { header: t("balance.credited"), key: "advance", render: (row) => formatMoney(netAdvance(row)) },
-              { header: t("balance.charged"), key: "meals", render: (row) => formatMoney(row.charged) },
+              {
+                header: t("balance.charged"),
+                key: "meals",
+                render: (row) => <button type="button" className="link-button" title={t("breakdown.open")} onClick={() => setOpenPerson(row)}>{formatMoney(row.charged)}</button>
+              },
               {
                 header: t("members.balance"),
                 key: "balance",
@@ -111,6 +117,8 @@ export function BalancesPage() {
           />
         )}
       </div>
+
+      {openPerson ? <PersonBreakdown entries={ledger.data ?? []} person={openPerson} onClose={() => setOpenPerson(null)} /> : null}
     </section>
   );
 }
