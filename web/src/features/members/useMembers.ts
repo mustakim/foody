@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { inviteMember, listMembers, promoteToAdmin } from "./membersApi";
+import { inviteMember, listMembers, promoteToAdmin, resendInvitation } from "./membersApi";
 
 export function useMembers() {
   return useQuery({ queryFn: listMembers, queryKey: ["members"] });
@@ -13,4 +13,8 @@ export function usePromoteToAdmin() {
 export function useInviteMember() {
   const queryClient = useQueryClient();
   return useMutation({ mutationFn: inviteMember, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }) });
+}
+
+export function useResendInvitation() {
+  return useMutation({ mutationFn: resendInvitation });
 }

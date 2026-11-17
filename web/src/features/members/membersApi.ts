@@ -35,3 +35,21 @@ export async function inviteMember(input: { email: string; firstName: string; la
   }
   return response;
 }
+
+// Invited but never activated: IAM keeps these as PendingVerification until
+// the person opens the emailed link and sets a password.
+export function isPendingActivation(member: BlocksUser): boolean {
+  return member.accountState === "PendingVerification" || (member.isVerified === false && member.active === false);
+}
+
+// Sends a fresh activation email when the first link has expired.
+export async function resendInvitation(member: BlocksUser) {
+  if (!member.itemId || !member.email) throw new Error("This member has no id or email.");
+  if (!isPendingActivation(member)) throw new Error("This member has already activated their account.");
+  const response = await blocksClient.auth.resendActivation({ email: member.email, userId: member.itemId });
+  if (response && response.isSuccess === false) {
+    const errors = response.errors && typeof response.errors === "object" ? Object.values(response.errors).join(" ") : "";
+    throw new Error(errors || String(response.message ?? "") || "Blocks could not resend the invitation.");
+  }
+  return response;
+}

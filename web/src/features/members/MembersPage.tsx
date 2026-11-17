@@ -1,5 +1,5 @@
 import type { BlocksUser } from "@seliseblocks/client";
-import { MailPlus, RefreshCw, Search, ShieldPlus, Users, Wallet } from "lucide-react";
+import { MailPlus, RefreshCw, Search, Send, ShieldPlus, Users, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatMoney } from "../../lib/blocks/items";
 import { useT } from "../../lib/i18n/LocalizationProvider";
@@ -17,7 +17,8 @@ import { CreditDialog } from "../ledger/CreditDialog";
 import { useLedger } from "../ledger/useLedger";
 import { isAdmin, useCurrentUser, userDisplayName } from "../profile/useCurrentUser";
 import { InviteDialog } from "./InviteDialog";
-import { useMembers, usePromoteToAdmin } from "./useMembers";
+import { isPendingActivation } from "./membersApi";
+import { useMembers, usePromoteToAdmin, useResendInvitation } from "./useMembers";
 
 export function MembersPage() {
   const { t } = useT();
@@ -25,6 +26,8 @@ export function MembersPage() {
   const members = useMembers();
   const ledger = useLedger();
   const promote = usePromoteToAdmin();
+  const resend = useResendInvitation();
+  const [resentEmail, setResentEmail] = useState("");
   const [search, setSearch] = useState("");
   const [creditFor, setCreditFor] = useState<BlocksUser | null>(null);
   const [promoteFor, setPromoteFor] = useState<BlocksUser | null>(null);
@@ -57,6 +60,8 @@ export function MembersPage() {
       </div>
       {invitedEmail ? <Alert tone="info">{t("members.invited").replace("{email}", invitedEmail)}</Alert> : null}
       {promote.error ? <Alert tone="error">{promote.error.message}</Alert> : null}
+      {resentEmail ? <Alert tone="info">{t("members.resent").replace("{email}", resentEmail)}</Alert> : null}
+      {resend.error ? <Alert tone="error">{t("members.resendFailed").replace("{error}", resend.error.message)}</Alert> : null}
 
       <div className="panel">
         <div className="panel-title"><Users size={16} /><span>{t("members.title")} ({rows.length})</span></div>
@@ -72,7 +77,9 @@ export function MembersPage() {
             columns={[
               { header: t("meals.colName"), key: "name", render: (row) => userDisplayName(row) || "—" },
               { header: t("meals.colEmail"), key: "email", render: (row) => row.email ?? "" },
-              { header: t("members.role"), key: "role", render: (row) => <StatusPill tone={isAdmin(row) ? "good" : "neutral"}>{isAdmin(row) ? "Admin" : "User"}</StatusPill> },
+              { header: t("members.role"), key: "role", render: (row) => (isPendingActivation(row)
+                  ? <StatusPill tone="warn">{t("members.pending")}</StatusPill>
+                  : <StatusPill tone={isAdmin(row) ? "good" : "neutral"}>{isAdmin(row) ? "Admin" : "User"}</StatusPill>) },
               {
                 header: t("members.balance"),
                 key: "balance",
@@ -83,6 +90,15 @@ export function MembersPage() {
                 key: "actions",
                 render: (row) => (
                   <div className="row-actions">
+                    {isPendingActivation(row) ? (
+                      <ActionButton
+                        icon={<Send size={16} />}
+                        disabled={resend.isPending && resend.variables === row}
+                        onClick={() => { setResentEmail(""); resend.mutate(row, { onSuccess: () => setResentEmail(row.email ?? "") }); }}
+                      >
+                        {resend.isPending && resend.variables === row ? t("common.loading") : t("members.resendInvite")}
+                      </ActionButton>
+                    ) : null}
                     <ActionButton icon={<Wallet size={16} />} onClick={() => setCreditFor(row)}>{t("members.adjustMoney")}</ActionButton>
                     {isAdmin(row) ? null : (
                       <ActionButton variant="icon" title={t("members.makeAdmin")} icon={<ShieldPlus size={16} />} disabled={promote.isPending} onClick={() => setPromoteFor(row)}>
